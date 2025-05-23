@@ -1,0 +1,25 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18  # or your preferred Node.js version
+    commands:
+      - echo "Installing dependencies..."
+      - npm install
+
+  build:
+    commands:
+      - echo "Building the application..."
+      - npm run build # (if you have a build step, like for TypeScript)
+      - echo "Build completed!"
+
+  post_build:
+    commands:
+      - echo "Starting Express server..."
+      - node app.js # or your main server file (e.g., server.js, index.js)
+
+artifacts:
+  files:
+    - '**/*'       # Deploy all files (adjust as needed)
+  base-directory: '.' # Root directory of the build
