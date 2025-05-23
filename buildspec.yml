@@ -27,5 +27,5 @@ phases:
 
 env:
   variables:
-    IMAGE_REPO_NAME: "my-node-app"  # Your ECR repo name
+    IMAGE_REPO_NAME: "aws-demo/node-app"  # Your ECR repo name
     IMAGE_TAG: "latest"
