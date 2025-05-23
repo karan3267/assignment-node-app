@@ -1,5 +1,10 @@
 version: 0.2
 
+env:
+  variables: 
+    IMAGE_REPO_NAME: "my-node-app"
+    IMAGE_TAG: "latest"
+
 phases:
   install:
     runtime-versions:
@@ -25,7 +30,3 @@ phases:
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
       - echo "Build completed!"
 
-env:
-  variables:
-    IMAGE_REPO_NAME: "aws-node-app"  # Your ECR repo name
-    IMAGE_TAG: "latest"
