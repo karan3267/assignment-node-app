@@ -17,11 +17,11 @@ phases:
     commands:
       - echo "Building Docker image..."
       - docker build -t my-node-app .
-      - docker tag my-node-app 761018874863.dkr.ecr.us-east-1.amazonaws.com/my-node-app:latest
+      - docker tag my-node-app 761018874863.dkr.ecr.us-east-1.amazonaws.com/aws-node-app:latest
 
   post_build:
     commands:
       - echo "Pushing Docker image to ECR..."
-      - docker push 761018874863.dkr.ecr.us-east-1.amazonaws.com/my-node-app:latest
+      - docker push 761018874863.dkr.ecr.us-east-1.amazonaws.com/aws-node-app:latest
       - echo "Build completed!"
 
