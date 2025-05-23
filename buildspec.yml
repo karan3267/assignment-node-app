@@ -16,8 +16,8 @@ phases:
   build:
     commands:
       - echo "Building Docker image..."
-      - docker build -t my-node-app:latest .
-      - docker tag my-node-app:latest 761018874863.dkr.ecr.us-east-1.amazonaws.com/my-node-app:latest
+      - docker build -t my-node-app .
+      - docker tag my-node-app 761018874863.dkr.ecr.us-east-1.amazonaws.com/my-node-app:latest
 
   post_build:
     commands:
