@@ -3,23 +3,29 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 18  # or your preferred Node.js version
+      nodejs: 18
     commands:
       - echo "Installing dependencies..."
       - npm install
 
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+
   build:
     commands:
-      - echo "Building the application..."
-      - npm run build # (if you have a build step, like for TypeScript)
-      - echo "Build completed!"
+      - echo "Building Docker image..."
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
 
   post_build:
     commands:
-      - echo "Starting Express server..."
-      - node app.js # or your main server file (e.g., server.js, index.js)
+      - echo "Pushing Docker image to ECR..."
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+      - echo "Build completed!"
 
-artifacts:
-  files:
-    - '**/*'       # Deploy all files (adjust as needed)
-  base-directory: '.' # Root directory of the build
+env:
+  variables:
+    IMAGE_REPO_NAME: "my-node-app"  # Your ECR repo name
+    IMAGE_TAG: "latest"
