@@ -3,8 +3,6 @@ name: Deploy Node.js Backend
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'node-backend/**'
 
 jobs:
   deploy:
