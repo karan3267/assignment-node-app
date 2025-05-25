@@ -54,7 +54,7 @@ jobs:
               requiresCompatibilities: .taskDefinition.requiresCompatibilities,
               cpu: .taskDefinition.cpu,
               memory: .taskDefinition.memory
-              executionRoleArn: "arn:aws:iam::761018874863:role/ecsTaskExecutionRole"
+              executionRoleArn: arn:aws:iam::761018874863:role/ecsTaskExecutionRole
             } + (if .taskDefinition.tags and (.taskDefinition.tags | length) > 0 then {tags: .taskDefinition.tags} else {} end)')
 
           NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" '.containerDefinitions[0].image = $IMAGE')
