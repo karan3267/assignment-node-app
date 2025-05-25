@@ -53,7 +53,7 @@ jobs:
               "placementConstraints": .taskDefinition.placementConstraints,
               "requiresCompatibilities": .taskDefinition.requiresCompatibilities,
               "cpu": .taskDefinition.cpu,
-              "memory": .taskDefinition.memory
+              "memory": .taskDefinition.memory,
               "executionRoleArn": "arn:aws:iam::761018874863:role/ecsTaskExecutionRole"
             } + (if .taskDefinition.tags and (.taskDefinition.tags | length) > 0 then {tags: .taskDefinition.tags} else {} end)')
 
