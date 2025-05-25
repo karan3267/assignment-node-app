@@ -22,6 +22,7 @@ jobs:
         id: time
         run: |
           echo "commit_time=$(git show -s --format=%cd --date=format:'%Y-%m-%d' ${{ steps.vars.outputs.sha }})" >> $GITHUB_OUTPUT
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -30,8 +31,8 @@ jobs:
           aws-region: us-east-1
 
       - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 761018874863.dkr.ecr.us-east-1.amazonaws.com
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build & Push Docker image
         working-directory: ./node-backend
