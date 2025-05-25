@@ -1,0 +1,27 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo "Installing dependencies..."
+      - npm install
+
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 761018874863.dkr.ecr.us-east-1.amazonaws.com
+
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - docker build -t aws-node-app .
+      - docker tag aws-node-app 761018874863.dkr.ecr.us-east-1.amazonaws.com/aws-node-app:latest
+
+  post_build:
+    commands:
+      - echo "Pushing Docker image to ECR..."
+      - docker push 761018874863.dkr.ecr.us-east-1.amazonaws.com/aws-node-app:latest
+      - echo "Build completed!"
+
