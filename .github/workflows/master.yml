@@ -37,7 +37,7 @@ jobs:
       - name: Build & Push Docker image
         working-directory: ./node-backend
         run: |
-          IMAGE_TAG=761018874863.dkr.ecr.us-east-1.amazonaws.com/node-color-api:main-${{ steps.time.outputs.commit_time }}-${{ steps.vars.outputs.sha }}
+          IMAGE_TAG=761018874863.dkr.ecr.us-east-1.amazonaws.com/aws-node-app:main-${{ steps.time.outputs.commit_time }}-${{ steps.vars.outputs.sha }}
           docker build -t $IMAGE_TAG .
           docker push $IMAGE_TAG
 
