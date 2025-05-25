@@ -35,7 +35,6 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build & Push Docker image
-        working-directory: ./node-backend
         run: |
           IMAGE_TAG=761018874863.dkr.ecr.us-east-1.amazonaws.com/aws-node-app:main-${{ steps.time.outputs.commit_time }}-${{ steps.vars.outputs.sha }}
           docker build -t $IMAGE_TAG .
