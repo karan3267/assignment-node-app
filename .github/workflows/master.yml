@@ -4,16 +4,8 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'node-backend/**'  # Only trigger when Node.js files change
+      - 'node-backend/**'
   workflow_dispatch:
-
-env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY: 761018874863.dkr.ecr.us-east-1.amazonaws.com/node-color-api
-  CLUSTER_NAME: react-app-v2
-  SERVICE_NAME: node-color-service
-  CONTAINER_NAME: node-api
-  TASK_FAMILY: node-color-api
 
 jobs:
   deploy:
@@ -21,70 +13,71 @@ jobs:
     permissions:
       contents: read
       id-token: write
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: ${{ env.AWS_REGION }}
-        role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+      - name: Set SHA and commit time
+        id: vars
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: commit time
+        id: time
+        run: |
+          echo "commit_time=$(git show -s --format=%cd --date=format:'%Y-%m-%d' ${{ steps.vars.outputs.sha }})" >> $GITHUB_OUTPUT
 
-    - name: Build Docker image
-      working-directory: ./node-backend
-      run: |
-        docker build -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
-        docker push ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
 
-    - name: Register task definition
-      id: register-task
-      run: |
-        # Get current task definition
-        TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_FAMILY }} --region ${{ env.AWS_REGION }})
-        
-        # Create new task definition JSON
-        NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | \
-          jq --arg IMAGE "${{ env.ECR_REPOSITORY }}:${{ github.sha }}" \
-          --arg CONTAINER "${{ env.CONTAINER_NAME }}" \
-          '{
-            family: .taskDefinition.family,
-            containerDefinitions: [.taskDefinition.containerDefinitions[] | if .name == $CONTAINER then .image = $IMAGE else . end],
-            networkMode: .taskDefinition.networkMode,
-            executionRoleArn: .taskDefinition.executionRoleArn,
-            requiresCompatibilities: .taskDefinition.requiresCompatibilities,
-            cpu: .taskDefinition.cpu,
-            memory: .taskDefinition.memory
-          }')
-        
-        # Register new revision
-        aws ecs register-task-definition \
-          --cli-input-json "$NEW_TASK_DEFINITION" \
-          --region ${{ env.AWS_REGION }}
-        
-        # Get new revision number
-        NEW_REVISION=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_FAMILY }} --region ${{ env.AWS_REGION }} | jq -r '.taskDefinition.revision')
-        echo "NEW_REVISION=$NEW_REVISION" >> $GITHUB_OUTPUT
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 761018874863.dkr.ecr.us-east-1.amazonaws.com
 
-    - name: Deploy service
-      run: |
-        aws ecs update-service \
-          --cluster ${{ env.CLUSTER_NAME }} \
-          --service ${{ env.SERVICE_NAME }} \
-          --task-definition ${{ env.TASK_FAMILY }}:${{ steps.register-task.outputs.NEW_REVISION }} \
-          --force-new-deployment \
-          --region ${{ env.AWS_REGION }}
+      - name: Build & Push Docker image
+        working-directory: ./node-backend
+        run: |
+          IMAGE_TAG=761018874863.dkr.ecr.us-east-1.amazonaws.com/node-color-api:main-${{ steps.time.outputs.commit_time }}-${{ steps.vars.outputs.sha }}
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
 
-    - name: Verify deployment
-      run: |
-        echo "Waiting for service to stabilize..."
-        aws ecs wait services-stable \
-          --cluster ${{ env.CLUSTER_NAME }} \
-          --services ${{ env.SERVICE_NAME }} \
-          --region ${{ env.AWS_REGION }}
-        echo "Deployment successful!"
+      - name: Register new ECS Task Definition
+        id: register-task
+        run: |
+          IMAGE=761018874863.dkr.ecr.us-east-1.amazonaws.com/node-color-api:main-${{ steps.time.outputs.commit_time }}-${{ steps.vars.outputs.sha }}
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition node-color-api | \
+            jq '{
+              family: .taskDefinition.family,
+              containerDefinitions: .taskDefinition.containerDefinitions,
+              networkMode: .taskDefinition.networkMode,
+              volumes: .taskDefinition.volumes,
+              placementConstraints: .taskDefinition.placementConstraints,
+              requiresCompatibilities: .taskDefinition.requiresCompatibilities,
+              cpu: .taskDefinition.cpu,
+              memory: .taskDefinition.memory
+            } + (if .taskDefinition.tags and (.taskDefinition.tags | length) > 0 then {tags: .taskDefinition.tags} else {} end)')
+
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" '.containerDefinitions[0].image = $IMAGE')
+
+          aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION"
+
+          NEW_REVISION=$(aws ecs describe-task-definition --task-definition node-color-api | jq -r '.taskDefinition.revision')
+          echo "NEW_REVISION=$NEW_REVISION" >> $GITHUB_OUTPUT
+
+      - name: Update ECS service
+        run: |
+          aws ecs update-service \
+            --cluster react-app-v2 \
+            --service node-color-service \
+            --task-definition node-color-api:${{ steps.register-task.outputs.NEW_REVISION }} \
+            --force-new-deployment \
+            --region us-east-1
+
+      - name: Wait for service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster react-app-v2 \
+            --services node-color-service \
+            --region us-east-1
